@@ -6,6 +6,7 @@ import pdfParse from 'pdf-parse';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
 import puppeteer from 'puppeteer';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
 
 export interface ConversionOptions {
   preserve_formatting?: boolean;
@@ -256,6 +257,10 @@ ${html}
         return await this.convertToPdf(content, outputPath);
       }
       
+      case 'docx': {
+        return await this.convertToDocx(content, outputPath);
+      }
+      
       default:
         throw new Error(`Unsupported output format: ${format}`);
     }
@@ -311,5 +316,33 @@ ${html}
         await browser.close();
       }
     }
+  }
+
+  private async convertToDocx(
+    content: { text: string; html?: string },
+    outputPath: string
+  ): Promise<Partial<ConversionResult>> {
+    // Convert text to paragraphs
+    const lines = content.text.split('\n');
+    const paragraphs = lines.map(line => {
+      if (line.trim() === '') {
+        return new Paragraph({});
+      }
+      return new Paragraph({
+        children: [new TextRun(line)],
+      });
+    });
+
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: paragraphs,
+      }],
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+    await fs.writeFile(outputPath, buffer);
+    
+    return {};
   }
 }
