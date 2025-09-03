@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "document-converter": {
+      "command": "npx",
+      "args": ["mcp-document-converter", "mcp"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
