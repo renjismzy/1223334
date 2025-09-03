@@ -1,10 +1,10 @@
 {
   "name": "mcp-document-converter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Model Context Protocol (MCP) server for document conversion between various formats",
   "main": "dist/index.js",
   "bin": {
-    "mcp-doc-converter": "./dist/cli.js"
+    "mcp-document-converter": "./dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
