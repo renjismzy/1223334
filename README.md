@@ -2,8 +2,6 @@
 
 一个基于 Model Context Protocol (MCP) 的文档转换工具，支持多种文档格式之间的转换。
 
-[![Deploy to Smithery](https://img.shields.io/badge/deploy%20to-Smithery-blue)](https://smithery.dev)
-
 ## 🚀 特性
 
 - 📄 支持多种文档格式：PDF、Word (DOCX)、Markdown、HTML、TXT
@@ -13,7 +11,6 @@
 - 🔧 CLI 和 MCP 服务器双模式
 - 📦 支持批量转换
 - 🎯 通过 npx 直接使用，无需安装
-- 🚢 支持一键部署到 Smithery 平台
 
 ## 📋 支持的格式
 
@@ -23,20 +20,6 @@
 - HTML (.html, .htm)
 - Markdown (.md, .markdown)
 - 纯文本 (.txt)
-
-## 🚢 Smithery 部署
-
-本项目支持一键部署到 Smithery 平台，实现云端文档转换服务。
-
-### 部署步骤
-
-1. 确保你有 Smithery 账户和访问权限
-2. 安装 Smithery CLI: `npm install -g @smithery/cli`
-3. 登录 Smithery: `smithery login`
-4. 部署服务: `smithery deploy`
-
-详细部署指南请参考 [SMITHERY_DEPLOYMENT.md](./SMITHERY_DEPLOYMENT.md)
-
 
 ### 输出格式
 - PDF (.pdf)
