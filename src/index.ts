@@ -33,7 +33,11 @@ class DocumentConverterServer {
     
     this.converter = new DocumentConverter();
     this.setupToolHandlers();
-    this.setupHttpServer();
+    
+    // Only setup HTTP server if not disabled
+    if (!process.env.NO_HTTP_SERVER) {
+      this.setupHttpServer();
+    }
   }
 
   private setupToolHandlers() {
@@ -287,14 +291,16 @@ class DocumentConverterServer {
 
   async run() {
     try {
-      // 启动HTTP服务器
-      const port = process.env.PORT || 3000;
-      if (this.httpServer) {
-        this.httpServer.listen(port, () => {
-          console.error(`🌐 HTTP server running on port ${port}`);
-          console.error(`📊 Status page: http://localhost:${port}/status`);
-          console.error(`🔍 Health check: http://localhost:${port}/health`);
-        });
+      // 启动HTTP服务器 (if not disabled)
+      if (!process.env.NO_HTTP_SERVER) {
+        const port = process.env.PORT || 3000;
+        if (this.httpServer) {
+          this.httpServer.listen(port, () => {
+            console.error(`🌐 HTTP server running on port ${port}`);
+            console.error(`📊 Status page: http://localhost:${port}/status`);
+            console.error(`🔍 Health check: http://localhost:${port}/health`);
+          });
+        }
       }
 
       // 启动MCP服务器

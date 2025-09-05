@@ -10,7 +10,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test": "node test-mcp-connection.js",
+    "test:http": "node diagnose.js"
   },
   "keywords": [
     "mcp",

@@ -99,7 +99,53 @@ Unexpected internal error or timeout.
    - 检查网络连接稳定性
    - 考虑使用更快的镜像源
 
-### 6. 运行时故障排除
+### 6. 部署平台连接问题
+
+如果遇到"部署成功但无法连接到服务器扫描工具"的错误：
+
+**错误示例：**
+```
+Your deployment succeeded, but we couldn't connect to your server to scan for tools. 
+This happens if your server is not working or if it requires authentication/configuration not set in your test profile.
+```
+
+**解决方案：**
+
+1. **确认HTTP端点配置**
+   ```bash
+   # 检查健康检查端点
+   curl http://your-domain.com/health
+   # 应该返回: {"status":"healthy",...}
+   
+   # 检查工具扫描端点
+   curl http://your-domain.com/tools
+   # 应该返回工具列表
+   ```
+
+2. **部署平台特定配置**
+   
+   **Railway/Render:**
+   - 确保端口设置为3000
+   - 添加健康检查路径：`/health`
+   - 设置环境变量：`PORT=3000`
+   
+   **Vercel/Netlify:**
+   - 配置serverless函数
+   - 设置API路由映射
+   - 确保函数超时设置足够长
+   
+   **Docker部署:**
+   - 确保端口映射：`-p 3000:3000`
+   - 检查防火墙设置
+   - 验证容器网络配置
+
+3. **网络和安全配置**
+   - 确保端口3000对外开放
+   - 检查防火墙规则
+   - 验证负载均衡器配置
+   - 确认SSL/TLS证书配置（如果使用HTTPS）
+
+### 7. 运行时故障排除
 
 如果服务运行时遇到问题：
 

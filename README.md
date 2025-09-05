@@ -217,6 +217,67 @@ node dist/index.js
    - 确保对输入文件有读取权限
    - 确保对输出目录有写入权限
 
+## MCP客户端配置
+
+### 快速配置Claude Desktop
+
+在Claude Desktop配置文件中添加：
+```json
+{
+  "mcpServers": {
+    "document-converter": {
+      "command": "node",
+      "args": ["/path/to/mcp-document-converter/dist/index.js"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
+```
+
+配置文件位置：
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- Mac: `~/.config/claude-desktop/claude_desktop_config.json`
+- Linux: `~/.config/claude-desktop/claude_desktop_config.json`
+
+### 连接问题诊断
+
+#### MCP连接测试
+```bash
+# 完整的MCP连接测试（推荐）
+npm test
+# 或直接运行
+node test-mcp-connection.js
+```
+
+#### HTTP端点诊断
+如果遇到"deployment succeeded but couldn't connect to server to scan for tools"错误：
+
+```bash
+# 使用HTTP诊断工具
+npm run test:http
+# 或直接运行
+node diagnose.js
+
+# 或手动检查
+curl http://localhost:3000/health
+curl http://localhost:3000/tools
+```
+
+### 故障排除步骤
+1. 确认服务器正在运行且监听正确端口
+2. 检查MCP客户端配置路径和参数
+3. 验证Node.js和依赖项正确安装
+4. 检查文件权限和环境变量
+
+详细配置指南：
+- [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md) - 🔧 **完整故障排除指南（推荐）**
+- [MCP_CLIENT_CONFIG.md](./MCP_CLIENT_CONFIG.md) - MCP客户端配置完整指南
+- [DEPLOYMENT.md](./DEPLOYMENT.md) - 部署配置指南
+- [PLATFORM_CONFIG_GUIDE.md](./PLATFORM_CONFIG_GUIDE.md) - 平台特定配置
+- [HTTP_ENDPOINTS.md](./HTTP_ENDPOINTS.md) - API端点文档
+
 ## 📄 许可证
 
 MIT License
