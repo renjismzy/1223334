@@ -1,0 +1,33 @@
+name: mcp-document-converter
+
+pipelines:
+  build:
+    steps:
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+  
+  publish:
+    needs: [build]
+    steps:
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Publish to NPM
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+triggers:
+  - event: push
+    branches: [main, master]
+    pipeline: build
+  
+  - event: tag
+    pattern: v*
+    pipeline: publish

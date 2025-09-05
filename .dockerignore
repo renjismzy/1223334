@@ -1,0 +1,61 @@
+# Source files (not needed in final image)
+src/
+
+# Development files
+tsconfig.json
+.gitignore
+.npmignore
+.dockerignore
+
+# Test files
+test/
+*.test.js
+*.test.ts
+test-files/
+
+# Development dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Coverage
+coverage/
+.nyc_output
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temporary
+tmp/
+temp/
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# CI/CD
+.github/
+.smithery/
+smithery.yaml
+
+# Generated files in development
+# Note: We need dist/ in the Docker build process
