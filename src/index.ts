@@ -174,9 +174,27 @@ class DocumentConverterServer {
   }
 
   async run() {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    console.error('MCP Document Converter Server running on stdio');
+    try {
+      const transport = new StdioServerTransport();
+      await this.server.connect(transport);
+      console.error('🚀 Starting MCP Document Converter Server...');
+      console.error('MCP Document Converter Server running on stdio');
+      
+      // 添加进程信号处理
+      process.on('SIGINT', () => {
+        console.error('Received SIGINT, shutting down gracefully...');
+        process.exit(0);
+      });
+      
+      process.on('SIGTERM', () => {
+        console.error('Received SIGTERM, shutting down gracefully...');
+        process.exit(0);
+      });
+      
+    } catch (error) {
+      console.error('Failed to start MCP server:', error);
+      process.exit(1);
+    }
   }
 }
 
