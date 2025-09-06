@@ -4,10 +4,19 @@
 
 ## 🚀 特性
 
+### 📄 文档转换
 - 📄 支持多种文档格式：PDF、Word (DOCX)、Markdown、HTML、TXT
 - 🔄 灵活的格式转换矩阵
 - 🖼️ 图片提取功能
 - 📊 文档信息分析
+
+### 🖼️ 图像转换 (新增!)
+- **丰富格式**: JPEG、PNG、WebP、AVIF、TIFF、GIF、BMP、SVG、HEIC等
+- **智能处理**: 自动调整大小、质量控制、背景设置
+- **水印功能**: 支持文字和图像水印
+- **高性能**: 基于Sharp库，处理速度快，内存占用低
+
+### 🔧 技术特性
 - 🔧 CLI 和 MCP 服务器双模式
 - 📦 支持批量转换
 - 🎯 通过 npx 直接使用，无需安装
@@ -272,6 +281,7 @@ curl http://localhost:3000/tools
 4. 检查文件权限和环境变量
 
 详细配置指南：
+- [IMAGE_CONVERSION_FEATURES.md](./IMAGE_CONVERSION_FEATURES.md) - 🖼️ **图像转换功能详解（新功能）** ✨
 - [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md) - 🔧 **完整故障排除指南（推荐）**
 - [MCP_CLIENT_CONFIG.md](./MCP_CLIENT_CONFIG.md) - MCP客户端配置完整指南
 - [DEPLOYMENT.md](./DEPLOYMENT.md) - 部署配置指南

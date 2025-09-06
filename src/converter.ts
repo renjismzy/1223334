@@ -7,11 +7,14 @@ import TurndownService from 'turndown';
 import { marked } from 'marked';
 import puppeteer from 'puppeteer';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { ImageConverter, ImageConversionOptions, ImageConversionResult } from './image-converter';
 
 export interface ConversionOptions {
   preserve_formatting?: boolean;
   extract_images?: boolean;
   image_output_dir?: string;
+  // 图像转换选项
+  image_options?: ImageConversionOptions;
 }
 
 export interface DocumentInfo {
@@ -34,12 +37,14 @@ export interface ConversionResult {
 
 export class DocumentConverter {
   private turndownService: TurndownService;
+  private imageConverter: ImageConverter;
 
   constructor() {
     this.turndownService = new TurndownService({
       headingStyle: 'atx',
       codeBlockStyle: 'fenced',
     });
+    this.imageConverter = new ImageConverter();
   }
 
   async convertDocument(
@@ -59,6 +64,28 @@ export class DocumentConverter {
 
       // 检测输入文件格式
       const inputFormat = this.detectFormat(inputPath);
+      
+      // 检查是否为图像格式
+      const imageFormats = ['jpeg', 'jpg', 'png', 'webp', 'avif', 'tiff', 'gif', 'bmp', 'svg', 'heic', 'heif'];
+      if (imageFormats.includes(inputFormat)) {
+        // 使用图像转换器
+        const imageResult = await this.imageConverter.convertImage(
+          inputPath,
+          outputPath,
+          targetFormat,
+          options.image_options || {}
+        );
+        return {
+          success: imageResult.success,
+          output_path: imageResult.output_path,
+          message: imageResult.message,
+          metadata: {
+            original_size: imageResult.original_size,
+            new_size: imageResult.new_size,
+            compression_ratio: imageResult.compression_ratio,
+          },
+        };
+      }
       
       // 读取文档内容
       const content = await this.readDocument(inputPath, inputFormat, options);
@@ -93,6 +120,23 @@ export class DocumentConverter {
     };
 
     try {
+      // 检查是否为图像格式
+      const imageFormats = ['jpeg', 'jpg', 'png', 'webp', 'avif', 'tiff', 'gif', 'bmp', 'svg', 'heic', 'heif'];
+      if (imageFormats.includes(format)) {
+        // 获取图像信息
+        const imageInfo = await this.imageConverter.getImageInfo(filePath);
+        return {
+          format: imageInfo.format,
+          size: imageInfo.size,
+          created: imageInfo.created,
+          modified: imageInfo.modified,
+          // 添加图像特有信息
+          pages: 1, // 图像只有一页
+          title: path.basename(filePath, path.extname(filePath)),
+          author: undefined,
+        };
+      }
+      
       // 尝试获取更多元数据
       if (format === 'pdf') {
         const buffer = await fs.readFile(filePath);
@@ -114,16 +158,30 @@ export class DocumentConverter {
   }
 
   getSupportedFormats() {
+    const imageFormats = this.imageConverter.getSupportedImageFormats();
     return {
-      input_formats: ['pdf', 'docx', 'doc', 'html', 'htm', 'md', 'txt'],
-      output_formats: ['pdf', 'docx', 'html', 'md', 'txt'],
+      input_formats: ['pdf', 'docx', 'doc', 'html', 'htm', 'md', 'txt', ...imageFormats.input_formats],
+      output_formats: ['pdf', 'docx', 'html', 'md', 'txt', ...imageFormats.output_formats],
       conversion_matrix: {
         pdf: ['txt', 'md', 'html'],
         docx: ['txt', 'md', 'html', 'pdf'],
         html: ['txt', 'md', 'pdf'],
         md: ['html', 'pdf', 'txt'],
         txt: ['html', 'md', 'pdf'],
+        // 图像格式转换矩阵
+        jpg: imageFormats.output_formats,
+        jpeg: imageFormats.output_formats,
+        png: imageFormats.output_formats,
+        webp: imageFormats.output_formats,
+        avif: imageFormats.output_formats,
+        tiff: imageFormats.output_formats,
+        gif: imageFormats.output_formats,
+        bmp: imageFormats.output_formats,
+        svg: imageFormats.output_formats,
+        heic: imageFormats.output_formats,
+        heif: imageFormats.output_formats,
       },
+      image_features: imageFormats.features,
     };
   }
 
@@ -131,6 +189,7 @@ export class DocumentConverter {
     const ext = path.extname(filePath).toLowerCase();
     const mimeType = mime.lookup(filePath);
     
+    // 文档格式
     switch (ext) {
       case '.pdf':
         return 'pdf';
@@ -146,10 +205,38 @@ export class DocumentConverter {
         return 'md';
       case '.txt':
         return 'txt';
+      // 图像格式
+      case '.jpg':
+      case '.jpeg':
+        return 'jpeg';
+      case '.png':
+        return 'png';
+      case '.webp':
+        return 'webp';
+      case '.avif':
+        return 'avif';
+      case '.tiff':
+      case '.tif':
+        return 'tiff';
+      case '.gif':
+        return 'gif';
+      case '.bmp':
+        return 'bmp';
+      case '.svg':
+        return 'svg';
+      case '.heic':
+        return 'heic';
+      case '.heif':
+        return 'heif';
       default:
-        if (mimeType && mimeType.includes('pdf')) return 'pdf';
-        if (mimeType && mimeType.includes('word')) return 'docx';
-        if (mimeType && mimeType.includes('html')) return 'html';
+        if (mimeType) {
+          if (mimeType.includes('pdf')) return 'pdf';
+          if (mimeType.includes('word')) return 'docx';
+          if (mimeType.includes('html')) return 'html';
+          if (mimeType.startsWith('image/')) {
+            return mimeType.split('/')[1];
+          }
+        }
         return 'txt'; // 默认为文本格式
     }
   }

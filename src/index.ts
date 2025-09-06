@@ -46,7 +46,7 @@ class DocumentConverterServer {
         tools: [
           {
             name: 'convert_document',
-            description: 'Convert documents between various formats (PDF, Word, Markdown, HTML, TXT)',
+            description: 'Convert documents and images between various formats (PDF, Word, Markdown, HTML, TXT, JPEG, PNG, WebP, AVIF, TIFF, GIF, BMP, SVG, HEIC, HEIF)',
             inputSchema: {
               type: 'object',
               properties: {
@@ -60,7 +60,7 @@ class DocumentConverterServer {
                 },
                 target_format: {
                   type: 'string',
-                  enum: ['pdf', 'docx', 'md', 'html', 'txt'],
+                  enum: ['pdf', 'docx', 'md', 'html', 'txt', 'jpeg', 'jpg', 'png', 'webp', 'avif', 'tiff', 'gif', 'bmp', 'svg', 'heic', 'heif'],
                   description: 'Target format for conversion',
                 },
                 options: {
@@ -77,6 +77,62 @@ class DocumentConverterServer {
                       description: 'Whether to extract and save images separately',
                       default: false,
                     },
+                    image_options: {
+                      type: 'object',
+                      description: 'Image-specific conversion options',
+                      properties: {
+                        width: {
+                          type: 'number',
+                          description: 'Target width in pixels',
+                        },
+                        height: {
+                          type: 'number',
+                          description: 'Target height in pixels',
+                        },
+                        quality: {
+                          type: 'number',
+                          description: 'Image quality (0-100)',
+                          minimum: 0,
+                          maximum: 100,
+                        },
+                        maintain_aspect_ratio: {
+                          type: 'boolean',
+                          description: 'Whether to maintain aspect ratio when resizing',
+                          default: true,
+                        },
+                        background_color: {
+                          type: 'string',
+                          description: 'Background color for transparent images',
+                        },
+                        watermark: {
+                          type: 'object',
+                          description: 'Watermark options',
+                          properties: {
+                            text: {
+                              type: 'string',
+                              description: 'Watermark text',
+                            },
+                            image_path: {
+                              type: 'string',
+                              description: 'Path to watermark image',
+                            },
+                            position: {
+                              type: 'string',
+                              enum: ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center'],
+                              description: 'Watermark position',
+                              default: 'bottom-right',
+                            },
+                            opacity: {
+                              type: 'number',
+                              description: 'Watermark opacity (0-1)',
+                              minimum: 0,
+                              maximum: 1,
+                              default: 0.5,
+                            },
+                          },
+                        },
+                      },
+                    },
                   },
                 },
               },
@@ -85,7 +141,7 @@ class DocumentConverterServer {
           },
           {
             name: 'get_document_info',
-            description: 'Get information about a document (format, size, page count, etc.)',
+            description: 'Get information about a document or image (format, size, dimensions, page count, etc.)',
             inputSchema: {
               type: 'object',
               properties: {
