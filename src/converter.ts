@@ -8,6 +8,7 @@ import { marked } from 'marked';
 import puppeteer from 'puppeteer';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { ImageConverter, ImageConversionOptions, ImageConversionResult } from './image-converter';
+import { spawn } from 'child_process';
 
 export interface ConversionOptions {
   preserve_formatting?: boolean;
@@ -64,6 +65,19 @@ export class DocumentConverter {
 
       // 检测输入文件格式
       const inputFormat = this.detectFormat(inputPath);
+      
+      // 优先使用 DocumentAssistant 的 Python 脚本进行 DOCX -> PDF 转换
+      if (inputFormat === 'docx' && targetFormat === 'pdf') {
+        const usedPython = await this.convertDocxToPdfViaPython(inputPath, outputPath);
+        if (usedPython) {
+          return {
+            success: true,
+            output_path: outputPath,
+            message: `Successfully converted docx to pdf via DocumentAssistant script`,
+          };
+        }
+        // 若 Python 方案失败，则继续走下方的常规读取+HTML渲染方案
+      }
       
       // 检查是否为图像格式
       const imageFormats = ['jpeg', 'jpg', 'png', 'webp', 'avif', 'tiff', 'gif', 'bmp', 'svg', 'heic', 'heif'];
@@ -431,5 +445,40 @@ ${html}
     await fs.writeFile(outputPath, buffer);
     
     return {};
+  }
+
+  // 使用 /DocumentAssistant/docx_to_pdf_converter.py 进行 DOCX -> PDF 转换
+  private async convertDocxToPdfViaPython(inputPath: string, outputPath: string): Promise<boolean> {
+    try {
+      const scriptPath = path.resolve(process.cwd(), 'DocumentAssistant', 'docx_to_pdf_converter.py');
+      const scriptExists = await fs.pathExists(scriptPath);
+      if (!scriptExists) {
+        return false;
+      }
+
+      // 优先尝试使用 'python'，失败则回退到 Windows 的 'py'
+      const run = (cmd: string, args: string[]) => new Promise<boolean>((resolve) => {
+        const proc = spawn(cmd, args, { stdio: 'inherit' });
+        proc.on('error', () => resolve(false));
+        proc.on('close', (code) => resolve(code === 0));
+      });
+
+      const args = [scriptPath, inputPath, outputPath];
+      let ok = await run('python', args);
+      if (!ok) {
+        ok = await run('py', ['-3', ...args]);
+      }
+
+      if (ok) {
+        // 简单确认输出文件存在且非空
+        if (await fs.pathExists(outputPath)) {
+          const stat = await fs.stat(outputPath);
+          if (stat.size > 0) return true;
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
   }
 }

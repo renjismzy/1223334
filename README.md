@@ -78,6 +78,9 @@ npx mcp-document-converter convert -i report.docx -o report.html -f html
 
 # 将 Markdown 转换为 PDF
 npx mcp-document-converter convert -i readme.md -o readme.pdf -f pdf
+
+# 将 Word 文档转换为 PDF（与 DocumentAssistant 对齐）
+npx mcp-document-converter convert -i report.docx -o report.pdf -f pdf
 ```
 
 #### 获取文档信息
@@ -201,6 +204,14 @@ node dist/index.js
 ### 系统要求
 - Node.js >= 16.0.0
 - 对于 PDF 生成功能，需要 Chromium（通过 Puppeteer 自动安装）
+- （可选）Python 环境用于 DOCX→PDF 高保真路径；未安装将自动回退到 Node 路径
+  - 安装依赖：`pip install python-docx reportlab pywin32`
+  - Windows 上安装 Microsoft Word 可启用 COM 转换，获得更高保真度
+
+### DOCX→PDF（与 DocumentAssistant 对齐）
+- 优先调用 `DocumentAssistant/docx_to_pdf_converter.py` 执行 DOCX→PDF；失败时自动回退到 Mammoth→HTML + Puppeteer 生成 PDF。
+- 在 Windows 且安装了 Microsoft Word 时，脚本会通过 COM 接口导出 PDF（更优保真）。
+- 无需额外配置，转换器会自动检测并选择最合适的路径。
 
 ## 🐛 故障排除
 
@@ -214,13 +225,19 @@ node dist/index.js
    ```
 
 2. **PDF 转换失败**
-   - 确保系统有足够内存
-   - 检查输入 PDF 文件是否损坏
-   - 尝试使用 `--preserve-formatting=false` 选项
+  - 确保系统有足够内存
+  - 检查输入 PDF 文件是否损坏
+  - 尝试使用 `--preserve-formatting=false` 选项
 
 3. **Word 文档转换问题**
-   - 仅支持 .docx 格式（不支持旧的 .doc 格式的完整功能）
-   - 复杂的格式可能无法完全保留
+  - 仅支持 .docx 格式（不支持旧的 .doc 格式的完整功能）
+  - 复杂的格式可能无法完全保留
+
+4. **DOCX→PDF 常见问题**
+   - 未安装 Python：安装后执行 `pip install python-docx reportlab pywin32`
+   - ReportLab 生成的 PDF 为空白：脚本会自动回退到 Microsoft Word COM 或 Node 路径
+   - 未安装 Microsoft Word 或 COM 失败：将自动使用 ReportLab 或 Node 路径
+   - 脚本位置：`DocumentAssistant/docx_to_pdf_converter.py`（由转换器自动调用）
 
 4. **权限问题**
    - 确保对输入文件有读取权限
