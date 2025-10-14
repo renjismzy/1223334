@@ -66,8 +66,17 @@ export class DocumentConverter {
       // 检测输入文件格式
       const inputFormat = this.detectFormat(inputPath);
       
-      // 优先使用 DocumentAssistant 的 Python 脚本进行 DOCX -> PDF 转换
+      // 在 Windows 上优先使用 Word COM（高保真）进行 DOCX -> PDF 转换
       if (inputFormat === 'docx' && targetFormat === 'pdf') {
+        const usedWordCom = await this.convertDocxToPdfViaWordCom(inputPath, outputPath);
+        if (usedWordCom) {
+          return {
+            success: true,
+            output_path: outputPath,
+            message: `Successfully converted docx to pdf via Microsoft Word (COM)`,
+          };
+        }
+        // 若未安装 Word 或 COM 失败，尝试 DocumentAssistant 的 Python 脚本
         const usedPython = await this.convertDocxToPdfViaPython(inputPath, outputPath);
         if (usedPython) {
           return {
@@ -76,7 +85,7 @@ export class DocumentConverter {
             message: `Successfully converted docx to pdf via DocumentAssistant script`,
           };
         }
-        // 若 Python 方案失败，则继续走下方的常规读取+HTML渲染方案
+        // 若上述两种方案失败，则继续走下方的常规读取+HTML渲染方案
       }
       
       // 检查是否为图像格式
@@ -458,7 +467,7 @@ ${html}
 
       // 优先尝试使用 'python'，失败则回退到 Windows 的 'py'
       const run = (cmd: string, args: string[]) => new Promise<boolean>((resolve) => {
-        const proc = spawn(cmd, args, { stdio: 'inherit' });
+        const proc = spawn(cmd, args, { stdio: 'inherit', env: { ...process.env, DOCX_PDF_METHOD: 'word', DOCX_PDF_SKIP_MCP: '1' } });
         proc.on('error', () => resolve(false));
         proc.on('close', (code) => resolve(code === 0));
       });
@@ -477,6 +486,50 @@ ${html}
         }
       }
       return false;
+    } catch {
+      return false;
+    }
+  }
+
+  // 在 Windows 上通过 VBScript 调用 Microsoft Word COM 进行 DOCX -> PDF 转换
+  private async convertDocxToPdfViaWordCom(inputPath: string, outputPath: string): Promise<boolean> {
+    if (process.platform !== 'win32') return false;
+    try {
+      const tempDir = await fs.mkdtemp(path.join(require('os').tmpdir(), 'docx2pdf-'));
+      const vbsPath = path.join(tempDir, 'docx2pdf.vbs');
+      const vbs = [
+        'On Error Resume Next',
+        'Dim inputPath, outputPath',
+        'inputPath = WScript.Arguments(0)',
+        'outputPath = WScript.Arguments(1)',
+        'Dim word',
+        'Set word = CreateObject("Word.Application")',
+        'If Err.Number <> 0 Then WScript.Quit 1',
+        'word.Visible = False',
+        'Dim doc',
+        'Set doc = word.Documents.Open(inputPath)',
+        'If Err.Number <> 0 Then WScript.Quit 2',
+        'doc.ExportAsFixedFormat outputPath, 17',
+        'doc.Close False',
+        'word.Quit',
+      ].join('\r\n');
+      await fs.writeFile(vbsPath, vbs, 'utf-8');
+
+      const run = () => new Promise<boolean>((resolve) => {
+        const proc = spawn('cscript', ['//nologo', vbsPath, inputPath, outputPath], { stdio: 'inherit' });
+        proc.on('error', () => resolve(false));
+        proc.on('close', async (code) => {
+          if (code === 0 && (await fs.pathExists(outputPath))) {
+            const stat = await fs.stat(outputPath);
+            resolve(stat.size > 0);
+          } else {
+            resolve(false);
+          }
+        });
+      });
+
+      const ok = await run();
+      return ok;
     } catch {
       return false;
     }

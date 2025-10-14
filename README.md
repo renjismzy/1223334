@@ -184,7 +184,7 @@ npm run dev
 ### 测试
 ```bash
 # 测试 CLI
-node dist/cli.js convert -i test.pdf -o test.md -f md
+ node dist/cli.js convert -i "输入文件路径.docx" -o "输出文件路径.pdf" -f pdf
 
 # 测试 MCP 服务器
 node dist/index.js
