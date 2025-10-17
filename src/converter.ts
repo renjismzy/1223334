@@ -16,6 +16,22 @@ export interface ConversionOptions {
   image_output_dir?: string;
   // 图像转换选项
   image_options?: ImageConversionOptions;
+  // PDF 输出选项
+  pdf_options?: {
+    format?: string;
+    landscape?: boolean;
+    printBackground?: boolean;
+    scale?: number;
+    margin?: {
+      top?: string;
+      right?: string;
+      bottom?: string;
+      left?: string;
+    };
+    header?: string;
+    footer?: string;
+    prefer_chinese_fonts?: boolean;
+  };
 }
 
 export interface DocumentInfo {
@@ -364,7 +380,7 @@ ${html}
       }
       
       case 'pdf': {
-        return await this.convertToPdf(content, outputPath);
+        return await this.convertToPdf(content, outputPath, options);
       }
       
       case 'docx': {
@@ -378,7 +394,8 @@ ${html}
 
   private async convertToPdf(
     content: { text: string; html?: string },
-    outputPath: string
+    outputPath: string,
+    options?: ConversionOptions
   ): Promise<Partial<ConversionResult>> {
     let browser;
     try {
@@ -386,16 +403,21 @@ ${html}
       const page = await browser.newPage();
       
       let html = content.html;
-      if (!html) {
+      if (!html || (options && options.preserve_formatting === false)) {
         html = await marked(content.text);
       }
+      
+      const preferChinese = options?.pdf_options?.prefer_chinese_fonts ?? true;
+      const fontFamily = preferChinese
+        ? "'Microsoft YaHei','SimSun','Noto Sans SC','Arial',sans-serif"
+        : "Arial, sans-serif";
       
       const fullHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; margin: 40px; }
+    body { font-family: ${fontFamily}; line-height: 1.6; margin: 40px; }
     h1, h2, h3 { color: #333; }
     pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
     code { background: #f5f5f5; padding: 2px 4px; border-radius: 3px; }
@@ -408,16 +430,32 @@ ${html}
       
       await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
       
+      const esc = (s: string) => String(s).replace(/[&<>]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c] || c));
+      
+      const pdfOpts = options?.pdf_options || {};
+      const hasHeaderFooter = !!(pdfOpts.header || pdfOpts.footer);
+      
       await page.pdf({
         path: outputPath,
-        format: 'A4',
-        printBackground: true,
+        format: (pdfOpts.format as any) || 'A4',
+        landscape: pdfOpts.landscape || false,
+        printBackground: pdfOpts.printBackground ?? true,
         margin: {
-          top: '20mm',
-          right: '20mm',
-          bottom: '20mm',
-          left: '20mm',
+          top: pdfOpts.margin?.top || '20mm',
+          right: pdfOpts.margin?.right || '20mm',
+          bottom: pdfOpts.margin?.bottom || '20mm',
+          left: pdfOpts.margin?.left || '20mm',
         },
+        ...(pdfOpts.scale ? { scale: pdfOpts.scale } : {}),
+        ...(hasHeaderFooter ? {
+          displayHeaderFooter: true,
+          headerTemplate: pdfOpts.header
+            ? `<div style="font-size:10px; color:#555; margin-left: 10mm; margin-right: 10mm;">${esc(pdfOpts.header)}</div>`
+            : '<div></div>',
+          footerTemplate: pdfOpts.footer
+            ? `<div style="font-size:10px; color:#555; margin-left: 10mm; margin-right: 10mm; width:100%; text-align:center;">${esc(pdfOpts.footer)}<span style="margin-left:8px;"><span class="pageNumber"></span>/<span class="totalPages"></span></span></div>`
+            : `<div style="font-size:10px; color:#555; text-align:center; width:100%;"><span class="pageNumber"></span>/<span class="totalPages"></span></div>`
+        } : {})
       });
       
       return {};

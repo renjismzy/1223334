@@ -133,6 +133,29 @@ class DocumentConverterServer {
                         },
                       },
                     },
+                    pdf_options: {
+                      type: 'object',
+                      description: 'PDF-specific output options',
+                      properties: {
+                        format: { type: 'string', description: 'Paper format (e.g., A4, Letter)' },
+                        landscape: { type: 'boolean', description: 'Landscape orientation' },
+                        printBackground: { type: 'boolean', description: 'Print background graphics' },
+                        scale: { type: 'number', description: 'Scale of the page rendering (0.1 - 2.0)' },
+                        margin: {
+                          type: 'object',
+                          description: 'Page margins',
+                          properties: {
+                            top: { type: 'string', description: 'Top margin (e.g., 20mm)' },
+                            right: { type: 'string', description: 'Right margin (e.g., 20mm)' },
+                            bottom: { type: 'string', description: 'Bottom margin (e.g., 20mm)' },
+                            left: { type: 'string', description: 'Left margin (e.g., 20mm)' },
+                          },
+                        },
+                        header: { type: 'string', description: 'Header text to display' },
+                        footer: { type: 'string', description: 'Footer text to display' },
+                        prefer_chinese_fonts: { type: 'boolean', description: 'Prefer Chinese font stack for rendering' }
+                      }
+                    },
                   },
                 },
               },
