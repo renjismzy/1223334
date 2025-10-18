@@ -82,14 +82,14 @@ export class DocumentConverter {
       // 检测输入文件格式
       const inputFormat = this.detectFormat(inputPath);
       
-      // 在 Windows 上优先使用 Word COM（高保真）进行 DOCX -> PDF 转换
-      if (inputFormat === 'docx' && targetFormat === 'pdf') {
+      // 在 Windows 上优先使用 Word COM（高保真）进行 DOCX/DOC -> PDF 转换
+      if ((inputFormat === 'docx' || inputFormat === 'doc') && targetFormat === 'pdf') {
         const usedWordCom = await this.convertDocxToPdfViaWordCom(inputPath, outputPath);
         if (usedWordCom) {
           return {
             success: true,
             output_path: outputPath,
-            message: `Successfully converted docx to pdf via Microsoft Word (COM)`,
+            message: `Successfully converted ${inputFormat} to pdf via Microsoft Word (COM)`,
           };
         }
         // 若未安装 Word 或 COM 失败，尝试 DocumentAssistant 的 Python 脚本
@@ -98,10 +98,19 @@ export class DocumentConverter {
           return {
             success: true,
             output_path: outputPath,
-            message: `Successfully converted docx to pdf via DocumentAssistant script`,
+            message: `Successfully converted ${inputFormat} to pdf via DocumentAssistant script`,
           };
         }
-        // 若上述两种方案失败，则继续走下方的常规读取+HTML渲染方案
+        // 若上述两种方案失败，尝试 LibreOffice 高保真转换
+        const usedLibre = await this.convertOfficeToPdfViaLibreOffice(inputPath, outputPath);
+        if (usedLibre) {
+          return {
+            success: true,
+            output_path: outputPath,
+            message: `Successfully converted ${inputFormat} to pdf via LibreOffice (headless)`,
+          };
+        }
+        // 若上述三种方案失败，则继续走下方的常规读取+HTML渲染方案
       }
       
       // 检查是否为图像格式
@@ -179,7 +188,7 @@ export class DocumentConverter {
       // 尝试获取更多元数据
       if (format === 'pdf') {
         const buffer = await fs.readFile(filePath);
-        const pdfData = await pdfParse(buffer);
+        const pdfData = await (pdfParse as any)(buffer);
         info.pages = pdfData.numpages;
         info.title = pdfData.info?.Title;
         info.author = pdfData.info?.Author;
@@ -204,6 +213,7 @@ export class DocumentConverter {
       conversion_matrix: {
         pdf: ['txt', 'md', 'html'],
         docx: ['txt', 'md', 'html', 'pdf'],
+        doc: ['txt', 'md', 'html', 'pdf'],
         html: ['txt', 'md', 'pdf'],
         md: ['html', 'pdf', 'txt'],
         txt: ['html', 'md', 'pdf'],
@@ -289,7 +299,7 @@ export class DocumentConverter {
     
     switch (format) {
       case 'pdf': {
-        const pdfData = await pdfParse(buffer);
+        const pdfData = await (pdfParse as any)(buffer);
         return {
           text: pdfData.text,
           metadata: pdfData.info,
@@ -544,10 +554,13 @@ ${html}
         'Set word = CreateObject("Word.Application")',
         'If Err.Number <> 0 Then WScript.Quit 1',
         'word.Visible = False',
+        'word.DisplayAlerts = 0',
         'Dim doc',
-        'Set doc = word.Documents.Open(inputPath)',
+        // 以只读方式打开，避免弹框
+        'Set doc = word.Documents.Open(inputPath, False, True)',
         'If Err.Number <> 0 Then WScript.Quit 2',
-        'doc.ExportAsFixedFormat outputPath, 17',
+        // 高保真导出 PDF，完整参数保持与打印一致
+        'doc.ExportAsFixedFormat outputPath, 17, False, 0, 0, 1, 1, 0, True, True, 1, True, True, False',
         'doc.Close False',
         'word.Quit',
       ].join('\r\n');
@@ -567,6 +580,38 @@ ${html}
       });
 
       const ok = await run();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+  // 使用 LibreOffice headless 进行 DOC/DOCX -> PDF 转换（高保真回退）
+  private async convertOfficeToPdfViaLibreOffice(inputPath: string, outputPath: string): Promise<boolean> {
+    try {
+      const outDir = path.dirname(outputPath);
+      await fs.ensureDir(outDir);
+      const args = ['--headless', '--convert-to', 'pdf', '--outdir', outDir, inputPath];
+      const run = (cmd: string) => new Promise<boolean>((resolve) => {
+        const proc = spawn(cmd, args, { stdio: 'inherit' });
+        proc.on('error', () => resolve(false));
+        proc.on('close', async (code) => {
+          if (code === 0) {
+            const produced = path.join(outDir, path.basename(inputPath, path.extname(inputPath)) + '.pdf');
+            if (await fs.pathExists(produced)) {
+              await fs.move(produced, outputPath, { overwrite: true });
+              const stat = await fs.stat(outputPath);
+              resolve(stat.size > 0);
+              return;
+            }
+          }
+          resolve(false);
+        });
+      });
+
+      let ok = await run('soffice');
+      if (!ok) {
+        ok = await run('lowriter');
+      }
       return ok;
     } catch {
       return false;

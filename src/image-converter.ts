@@ -136,7 +136,7 @@ export class ImageConverter {
     } catch (error) {
       // 如果Sharp失败，尝试使用Jimp
       try {
-        const image = await Jimp.read(filePath);
+        const image = await (Jimp as any).read(filePath);
         return {
           format,
           width: image.getWidth(),
@@ -351,12 +351,12 @@ export class ImageConverter {
     targetFormat: string,
     options: ImageConversionOptions
   ): Promise<void> {
-    const image = await Jimp.read(inputPath);
+    const image = await (Jimp as any).read(inputPath);
     
     // 调整大小
     if (options.width || options.height) {
-      const width = options.width || Jimp.AUTO;
-      const height = options.height || Jimp.AUTO;
+      const width = options.width || (Jimp as any).AUTO;
+      const height = options.height || (Jimp as any).AUTO;
       image.resize(width, height);
     }
     
