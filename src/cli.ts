@@ -104,8 +104,9 @@ program
     console.log('📤 Output formats:', formats.output_formats.join(', '));
     
     console.log('\n🔄 Conversion Matrix:');
-    Object.entries(formats.conversion_matrix).forEach(([input, outputs]) => {
-      console.log(`  ${input.toUpperCase()} → ${(outputs as string[]).map(f => f.toUpperCase()).join(', ')}`);
+    const matrix = formats.conversion_matrix as Record<string, string[]>;
+    Object.entries(matrix).forEach(([input, outputs]) => {
+      console.log(`  ${input.toUpperCase()} → ${outputs.map(f => f.toUpperCase()).join(', ')}`);
     });
   });
 
