@@ -10,6 +10,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import * as http from 'http';
 import * as url from 'url';
+import * as fs from 'fs-extra';
 // 导入文档转换器类
 import { DocumentConverter } from './converter';
 
@@ -219,7 +220,22 @@ class DocumentConverterServer {
           }
 
           case 'get_document_info': {
-            const { file_path } = args as { file_path: string };
+            const { file_path } = args as { file_path?: string };
+
+            if (typeof file_path !== 'string' || file_path.trim().length === 0) {
+              throw new McpError(
+                ErrorCode.InvalidParams,
+                "Missing required 'file_path' (string)."
+              );
+            }
+
+            if (!(await fs.pathExists(file_path))) {
+              throw new McpError(
+                ErrorCode.InvalidParams,
+                `File does not exist: ${file_path}`
+              );
+            }
+
             const info = await this.converter.getDocumentInfo(file_path);
 
             return {
