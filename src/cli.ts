@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 import { DocumentConverter } from './converter.js';
+import type { ConversionOptions } from './converter.js';
 
 const program = new Command();
 const converter = new DocumentConverter();
@@ -26,15 +27,29 @@ program
     try {
       console.log('🔄 Converting document...');
       
+      const inputExt = path.extname(options.input).toLowerCase();
+      const isWordToPdf = (inputExt === '.docx' || inputExt === '.doc') && options.format.toLowerCase() === 'pdf';
+
+      const convOpts: ConversionOptions = {
+        preserve_formatting: options.preserveFormatting,
+        extract_images: options.extractImages,
+        image_output_dir: options.imageDir ? path.resolve(options.imageDir) : undefined,
+      };
+
+      if (isWordToPdf) {
+        // 针对 Word→PDF 默认开启高保真排版与中文字体优先
+        convOpts.preserve_formatting = convOpts.preserve_formatting ?? true;
+        convOpts.pdf_options = {
+          ...(convOpts.pdf_options || {}),
+          prefer_chinese_fonts: (convOpts.pdf_options?.prefer_chinese_fonts ?? true),
+        };
+      }
+      
       const result = await converter.convertDocument(
         path.resolve(options.input),
         path.resolve(options.output),
         options.format,
-        {
-          preserve_formatting: options.preserveFormatting,
-          extract_images: options.extractImages,
-          image_output_dir: options.imageDir ? path.resolve(options.imageDir) : undefined,
-        }
+        convOpts
       );
       
       if (result.success) {
